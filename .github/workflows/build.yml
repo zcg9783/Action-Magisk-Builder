@@ -12,26 +12,20 @@ jobs:
     strategy:
       fail-fast: false
     steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
       - name: Setup environment [1]
         uses: ./.github/actions/setup
 
-      - name: Setup environment [2]
-        run: |
-          sudo apt-get upgrade -y
-          sudo apt-get update -y
-
-      - name: Clone Magisk
-        run: |
-          git clone --recurse-submodules https://github.com/topjohnwu/Magisk.git
-
       - name: Build release
-        run: ./Magisk/build.py-vr all
+        run: cd Magisk && ./build.py -vr all
 
       - name: Build debug
-        run: ./Magisk/build.py-v all
+        run: cd Magisk && ./build.py -v all
 
       - name: Stop gradle daemon
-        run: ./Magisk/gradlew --stop
+        run: cd Magisk && ./gradlew --stop
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4

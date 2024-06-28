@@ -39,6 +39,11 @@ runs:
         key: ${{ runner.os }}-build-cache-${{ github.sha }}
         restore-keys: ${{ runner.os }}-build-cache-
 
+    - name: Clone Magisk
+      run: |
+        git clone --recurse-submodules https://github.com/topjohnwu/Magisk.git
+      shell: bash
+
     - name: Set up NDK
-      run: python build.py -v ndk
+      run: cd Magisk && python build.py -v ndk
       shell: bash
