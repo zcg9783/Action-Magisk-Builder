@@ -2,6 +2,15 @@ name: Magisk Build
 
 on:
   workflow_dispatch:
+    inputs:
+      MAGISK_REPO:
+        description: 'Magisk Repository'
+        required: true
+        default: 'https://github.com/topjohnwu/Magisk.git'
+      MAGISK_BRANCH:
+        description: 'Magisk Repository Branch'
+        required: true
+        default: 'master'
 
 jobs:
   build:

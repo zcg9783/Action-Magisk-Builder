@@ -41,7 +41,7 @@ runs:
 
     - name: Clone Magisk
       run: |
-        git clone --recurse-submodules https://github.com/topjohnwu/Magisk.git
+        git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }}
       shell: bash
 
     - name: Set up NDK
