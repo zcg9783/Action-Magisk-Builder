@@ -27,6 +27,10 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
 
+      - name: Clone Magisk
+        run: |
+          git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }}
+
       - name: Setup environment [1]
         uses: ./.github/actions/setup
 
