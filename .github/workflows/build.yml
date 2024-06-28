@@ -9,6 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SCCACHE_DIRECT: false
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
     steps:
