@@ -1,0 +1,48 @@
+name: Magisk Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Magisk Artifacts
+    runs-on: ubuntu-latest
+    env:
+      SCCACHE_DIRECT: false
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Setup environment [1]
+        uses: ./.github/actions/setup
+
+      - name: Setup environment [2]
+        run: |
+          sudo apt-get upgrade -y
+          sudo apt-get update -y
+
+      - name: Clone Magisk
+        run: |
+          git clone --recurse-submodules https://github.com/topjohnwu/Magisk.git
+
+      - name: Build release
+        run: ./Magisk/build.py-vr all
+
+      - name: Build debug
+        run: ./Magisk/build.py-v all
+
+      - name: Stop gradle daemon
+        run: ./Magisk/gradlew --stop
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.sha }}
+          path: Magisk/out
+          compression-level: 9
+
+      - name: Upload mapping and native debug symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.sha }}-symbols
+          path: Magisk/app/build/outputs
+          compression-level: 9
