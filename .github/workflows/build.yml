@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    name: Build Magisk Artifacts
+    name: Build Magisk
     runs-on: ubuntu-latest
     env:
       SCCACHE_DIRECT: false
@@ -40,3 +40,16 @@ jobs:
           name: ${{ github.sha }}-symbols
           path: Magisk/app/build/outputs
           compression-level: 9
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            Magisk/out/app-release.apk
+            Magisk/out/app-debug.apk
+          name: Unofficial Magisk Build Release by ${{ github.actor }}
+          tag_name: ${{ github.run_id }}
+          body: |
+            ## Available Downloads
+            - app-release.apk (Normal)
+            - app-debug.apk (Debug)
