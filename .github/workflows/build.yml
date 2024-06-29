@@ -35,6 +35,12 @@ jobs:
       - name: Setup environment [1]
         uses: ./.github/actions/setup
 
+      - name: Setup environment [2]
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+          sudo apt-get install --only-upgrade libstdc++6
+
       - name: Build release
         run: cd Magisk && ./build.py -vr all
 
