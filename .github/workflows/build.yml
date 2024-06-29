@@ -70,5 +70,7 @@ jobs:
             ## Resources
             - [Magisk Repository](${{ inputs.MAGISK_REPO }}/tree/${{ inputs.MAGISK_BRANCH }})
             ## Available Downloads
-            - Release (Normal)
-            - Debug (Debug)
+            - Release, for normal usage.
+            - Debug, solely for debugging purposes.
+            ## Notes
+            - I, carlodandan, won't entertain any flashing/app/patching issue. Contact whoever the maintainer of the Magisk repository you used for building. Again, the builder you used is for personal use only. I am not responsible with any of the error upon flashing or patching.
