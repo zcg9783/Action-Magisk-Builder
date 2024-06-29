@@ -6,7 +6,7 @@ on:
       MAGISK_REPO:
         description: 'Magisk Repository'
         required: true
-        default: 'https://github.com/topjohnwu/Magisk.git'
+        default: 'https://github.com/topjohnwu/Magisk'
       MAGISK_BRANCH:
         description: 'Magisk Repository Branch'
         required: true
@@ -29,7 +29,8 @@ jobs:
 
       - name: Clone Magisk
         run: |
-          git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }}
+          git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk
+          echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties)" >> $GITHUB_ENV
 
       - name: Setup environment [1]
         uses: ./.github/actions/setup
@@ -63,9 +64,11 @@ jobs:
           files: |
             Magisk/out/app-release.apk
             Magisk/out/app-debug.apk
-          name: Unofficial Magisk Build Release by ${{ github.actor }}
+          name: Unofficial Magisk Build Release v${{ env.MAGISK_VERS }}
           tag_name: ${{ github.run_id }}
           body: |
+            ## Resources
+            - [Magisk Repository](${{ inputs.MAGISK_REPO }}/tree/${{ inputs.MAGISK_BRANCH }})
             ## Available Downloads
-            - app-release.apk (Normal)
-            - app-debug.apk (Debug)
+            - Release (Normal)
+            - Debug (Debug)
