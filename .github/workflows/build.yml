@@ -38,13 +38,6 @@ jobs:
           distribution: "temurin"
           java-version: "8"
 
-      - name: Install Python 2
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python2 
-          sudo update-alternatives --install /usr/bin/python python /usr/bin/python2 1
-        shell: bash
-
       - name: Set up sccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -78,14 +71,14 @@ jobs:
           sudo apt-get install --only-upgrade libstdc++6 -y
 
       - name: Set up NDK
-        run: cd Magisk && python2 build.py -v ndk  # 使用 python2
+        run: cd Magisk && python build.py -v ndk
         shell: bash
 
       - name: Build release
-        run: cd Magisk && python2 build.py -vr all  # 使用 python2
+        run: cd Magisk && python build.py -vr all
 
       - name: Build debug
-        run: cd Magisk && python2 build.py -v all  # 使用 python2
+        run: cd Magisk && python build.py -v all
 
       - name: Stop gradle daemon
         run: cd Magisk && ./gradlew --stop
