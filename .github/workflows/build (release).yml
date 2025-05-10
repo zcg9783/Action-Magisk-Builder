@@ -1,4 +1,4 @@
-name: Magisk Build (release)
+name: Magisk Build (27000)
 
 on:
   workflow_dispatch:
@@ -31,18 +31,63 @@ jobs:
         run: |
           git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties)" >> $GITHUB_ENV
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
 
-      - name: Setup environment [1]
-        uses: ./.github/actions/setup
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+
+      - name: Install Python dependencies
+        run: sudo apt-get update && sudo apt-get install -y python3-distutils
+        shell: bash
+
+      - name: Set up sccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          variant: sccache
+          key: ${{ runner.os }}-${{ github.sha }}
+          restore-keys: ${{ runner.os }}
+          max-size: 10000M
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            !~/.gradle/caches/build-cache-*
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Cache build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches/build-cache-*
+          key: ${{ runner.os }}-build-cache-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-build-cache-
+
+      - name: Set up NDK
+        run: cd Magisk && python build.py -v ndk
+        shell: bash  
 
       - name: Setup environment [2]
         run: |
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
-          sudo apt-get install --only-upgrade libstdc++6
+          sudo apt-get install --only-upgrade libstdc++6 -y
 
       - name: Build release
         run: cd Magisk && ./build.py -vr all
+
+      - name: Build debug
+        run: cd Magisk && ./build.py -v all
 
       - name: Stop gradle daemon
         run: cd Magisk && ./gradlew --stop
