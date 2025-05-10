@@ -86,9 +86,6 @@ jobs:
       - name: Build release
         run: cd Magisk && ./build.py -vr all
 
-      - name: Build debug
-        run: cd Magisk && ./build.py -v all
-
       - name: Stop gradle daemon
         run: cd Magisk && ./gradlew --stop
 
