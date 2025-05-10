@@ -6,11 +6,11 @@ on:
       MAGISK_REPO:
         description: 'Magisk Repository'
         required: true
-        default: 'https://github.com/topjohnwu/Magisk'
+        default: 'https://github.com/zcg9783/KitsuneMagisk'
       MAGISK_BRANCH:
         description: 'Magisk Repository Branch'
         required: true
-        default: 'master'
+        default: 'kitsune'
 
 jobs:
   build:
