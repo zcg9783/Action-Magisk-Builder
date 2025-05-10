@@ -13,6 +13,9 @@ runs:
       with:
         python-version: "3.x"
 
+    - name: Install Python dependencies
+      run: sudo apt-get update && sudo apt-get install -y python3-distutils
+
     - name: Set up sccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:
