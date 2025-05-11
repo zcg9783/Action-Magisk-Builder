@@ -44,7 +44,7 @@ jobs:
           python-version: "3.8"
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust@v1
+        uses: actions-rust-lang/setup-rust@v2
         with:
           toolchain: 1.66.0
           components: rustc, cargo
