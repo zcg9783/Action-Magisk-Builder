@@ -6,7 +6,7 @@ on:
       MAGISK_REPO:
         description: 'Magisk Repository'
         required: true
-        default: 'https://github.com/topjohnwu/Magisk'
+        default: 'https://github.com/zcg9783/Magisk'
       MAGISK_BRANCH:
         description: 'Magisk Repository Branch'
         required: true
