@@ -1,4 +1,4 @@
-name: Magisk Build (22100)
+name: Magisk Build (28100)
 
 on:
   workflow_dispatch:
@@ -10,12 +10,12 @@ on:
       MAGISK_BRANCH:
         description: 'Magisk Repository Branch'
         required: true
-        default: 'v22.1'
+        default: 'master'
 
 jobs:
   build:
     name: Build Magisk
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     env:
       SCCACHE_DIRECT: false
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -32,11 +32,16 @@ jobs:
           git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties)" >> $GITHUB_ENV
 
-      - name: Set up JDK 11
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          java-version: "11"
+          java-version: "21"
+
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
 
       - name: Set up sccache
         uses: hendrikmuhs/ccache-action@v1.2
@@ -64,21 +69,18 @@ jobs:
           key: ${{ runner.os }}-build-cache-${{ github.sha }}
           restore-keys: ${{ runner.os }}-build-cache-
 
+      - name: Set up NDK
+        run: cd Magisk && python build.py -v ndk
+        shell: bash
+
       - name: Setup environment
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
           sudo apt-get install --only-upgrade libstdc++6 -y
 
-      - name: Set up NDK
-        run: cd Magisk && python build.py -v ndk
-        shell: bash
-
       - name: Build release
-        run: cd Magisk && python build.py -vr all
-
-      - name: Build debug
-        run: cd Magisk && python build.py -v all
+        run: cd Magisk && ./build.py -vr all
 
       - name: Stop gradle daemon
         run: cd Magisk && ./gradlew --stop
@@ -101,8 +103,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            Magisk/out/app-release.apk
-            Magisk/out/app-debug.apk
+            Magisk/out/app-release.apk            
           name: Unofficial Magisk Build Release v${{ env.MAGISK_VERS }}
           tag_name: ${{ github.run_id }}
           body: |
