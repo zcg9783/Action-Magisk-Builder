@@ -43,6 +43,11 @@ jobs:
         with:
           python-version: "3.8"
 
+      - name: Add Maven Repositories
+        run: |
+          sed -i "/repositories {/a\        mavenCentral()\n        google()" Magisk/build.gradle
+          sed -i "/repositories {/a\        mavenCentral()\n        google()" Magisk/app/build.gradle
+
       - name: Set up sccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -61,42 +66,27 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts') }}
           restore-keys: ${{ runner.os }}-gradle-
 
-      - name: Cache build cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches/build-cache-*
-          key: ${{ runner.os }}-build-cache-${{ github.sha }}
-          restore-keys: ${{ runner.os }}-build-cache-
-
       - name: Set up NDK
         run: cd Magisk && python build.py -v ndk
         shell: bash  
 
-      - name: Setup environment [2]
+      - name: Setup environment
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
           sudo apt-get install --only-upgrade libstdc++6 -y
 
       - name: Build release
-        run: cd Magisk && ./build.py -vr all
-
-      - name: Stop gradle daemon
-        run: cd Magisk && ./gradlew --stop
+        run: |
+          cd Magisk
+          ./gradlew --stop
+          ./build.py -vr all
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.sha }}
           path: Magisk/out
-          compression-level: 9
-
-      - name: Upload mapping and native debug symbols
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.sha }}-symbols
-          path: Magisk/app/build/outputs
           compression-level: 9
 
       - name: Upload to Release
@@ -109,9 +99,7 @@ jobs:
           tag_name: ${{ github.run_id }}
           body: |
             ## Resources
-            - [Magisk Repository](${{ inputs.MAGISK_REPO }}/tree/${{ inputs.MAGISK_BRANCH }})
+            - [Magisk Repository](${{ inputs.MAGISK_REPO }}/tree/${{ inputs.MAGISK_BRANCH }}
             ## Available Downloads
             - Release, for normal usage.
             - Debug, solely for debugging purposes.
-            ## Notes
-            - I, carlodandan, won't entertain any flashing/app/patching issue. Contact whoever the maintainer of the Magisk repository you used for building. Again, the builder you used is for personal use only. I am not responsible with any of the error upon flashing or patching.
