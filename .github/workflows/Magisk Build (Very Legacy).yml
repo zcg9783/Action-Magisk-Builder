@@ -1,4 +1,4 @@
-name: Magisk Build (Very Legacy)
+name: Magisk Build (Legacy)
 
 on:
   workflow_dispatch:
@@ -21,13 +21,15 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     permissions:
       contents: write
+    strategy:
+      fail-fast: false
     steps:
       - name: Check out
         uses: actions/checkout@v4
 
       - name: Clone Magisk
         run: |
-          git clone --depth=1 --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} Magisk
+          git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties)" >> $GITHUB_ENV
       
       - name: Set up JDK 8
@@ -36,42 +38,86 @@ jobs:
           distribution: "temurin"
           java-version: "8"
 
-      - name: Configure Repositories
-        run: |
-          sed -i "/allprojects {/a\    repositories {\n        google()\n        mavenCentral()\n        maven { url 'https://jitpack.io' }\n    }" Magisk/build.gradle
-          sed -i "/dependencies {/a\    implementation 'org.koin:koin-core:2.1.6'\n    implementation 'org.koin:koin-android:2.1.6'\n    implementation 'org.koin:koin-androidx-viewmodel:2.1.6'" Magisk/app/build.gradle
+     - name: Set up JDK 8
+         uses: actions/setup-java@v4
+         with:
+           distribution: "temurin"
+           java-version: "8"
+
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+
+      - name: Set up sccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          variant: sccache
+          key: ${{ runner.os }}-${{ github.sha }}
+          restore-keys: ${{ runner.os }}
+          max-size: 10000M
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            !~/.gradle/caches/build-cache-*
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Cache build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches/build-cache-*
+          key: ${{ runner.os }}-build-cache-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-build-cache-
 
       - name: Set up NDK
-        run: |
-          cd Magisk
-          python build.py -v ndk
+        run: cd Magisk && python build.py -v ndk
+        shell: bash  
 
-      - name: Build artifacts
+      - name: Setup environment [2]
         run: |
-          cd Magisk
-          ./gradlew clean
-          ./gradlew assemble --refresh-dependencies --stacktrace
-          ./build.py -vr all
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          sudo apt-get update
+          sudo apt-get install --only-upgrade libstdc++6 -y
 
-      - name: Upload build artifacts
+      - name: Build release
+        run: cd Magisk && ./build.py -vr all
+
+      - name: Stop gradle daemon
+        run: cd Magisk && ./gradlew --stop
+
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: magisk-build-${{ github.run_id }}
-          path: |
-            Magisk/out/*.apk
-            Magisk/native/out/**/*
+          name: ${{ github.sha }}
+          path: Magisk/out
+          compression-level: 9
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        if: always()
+      - name: Upload mapping and native debug symbols
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: magisk-${{ env.MAGISK_VERS }}
-          name: "Magisk ${{ env.MAGISK_VERS }} Build"
-          body: |
-            Unofficial build from ${{ inputs.MAGISK_REPO }}@${{ inputs.MAGISK_BRANCH }}
-            Generated at ${{ github.run_id }}
+          name: ${{ github.sha }}-symbols
+          path: Magisk/app/build/outputs
+          compression-level: 9
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
           files: |
             Magisk/out/app-release.apk
-            Magisk/out/stub-release.apk
-          draft: false
-          prerelease: false
+            Magisk/out/app-debug.apk
+          name: Unofficial Magisk Build Release v${{ env.MAGISK_VERS }}
+          tag_name: ${{ github.run_id }}
+          body: |
+            ## Resources
+            - [Magisk Repository](${{ inputs.MAGISK_REPO }}/tree/${{ inputs.MAGISK_BRANCH }})
+            ## Available Downloads
+            - Release, for normal usage.
+            - Debug, solely for debugging purposes.
+            ## Notes
+            - I, carlodandan, won't entertain any flashing/app/patching issue. Contact whoever the maintainer of the Magisk repository you used for building. Again, the builder you used is for personal use only. I am not responsible with any of the error upon flashing or patching.
