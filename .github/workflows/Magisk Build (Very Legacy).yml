@@ -36,10 +36,10 @@ jobs:
           distribution: "temurin"
           java-version: "8"
 
-      - name: Add Maven Repositories
+      - name: Configure Repositories
         run: |
-          find Magisk -name 'build.gradle' -exec sed -i "1s/^/buildscript { repositories { google(); mavenCentral() } }\n/" {} \;
-          find Magisk -name 'build.gradle' -exec sed -i "/repositories {/a\        maven { url 'https://jitpack.io' }" {} \;
+          sed -i "/buildscript {/a\    repositories {\n        google()\n        mavenCentral()\n    }" Magisk/build.gradle
+          sed -i "/allprojects {/a\    repositories {\n        google()\n        mavenCentral()\n        maven { url 'https://jitpack.io' }\n    }" Magisk/build.gradle
 
       - name: Set up NDK
         run: |
