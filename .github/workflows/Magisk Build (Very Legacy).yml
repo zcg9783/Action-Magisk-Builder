@@ -29,7 +29,7 @@ jobs:
         run: |
           git clone --depth=1 --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} Magisk
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties)" >> $GITHUB_ENV
-          ls -la Magisk  # Debug directory structure
+          ls -la Magisk/app/build.gradle
       
       - name: Set up JDK 8
         uses: actions/setup-java@v4
@@ -39,8 +39,8 @@ jobs:
 
       - name: Configure Repositories
         run: |
-          find Magisk -name 'build.gradle' -exec sed -i "1i buildscript { repositories { google(); mavenCentral() } }" {} \;
-          find Magisk -name 'build.gradle' -exec sed -i "/repositories {/a\        maven { url 'https://jitpack.io' }" {} \;
+          sed -i "/allprojects {/a\    repositories {\n        google()\n        mavenCentral()\n        maven { url 'https://jitpack.io' }\n    }" Magisk/build.gradle
+          sed -i "/dependencies {/a\    implementation 'org.koin:koin-core:2.1.6'\n    implementation 'org.koin:koin-android:2.1.6'\n    implementation 'org.koin:koin-androidx-viewmodel:2.1.6'" Magisk/app/build.gradle
 
       - name: Set up NDK
         run: |
@@ -50,8 +50,8 @@ jobs:
       - name: Build artifacts
         run: |
           cd Magisk
-          ./gradlew --stop
-          ./gradlew build --refresh-dependencies
+          ./gradlew clean
+          ./gradlew assemble --refresh-dependencies --stacktrace
           ./build.py -vr all
 
       - name: Upload build artifacts
