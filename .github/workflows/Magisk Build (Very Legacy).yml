@@ -32,7 +32,6 @@ jobs:
 
       - name: Modify build.py to remove APK builds
         run: |
-          sed -i '/build_apk/d' Magisk/build.py
           sed -i '/self\.build_apk/d' Magisk/build.py
 
       - name: Set up JDK 11
