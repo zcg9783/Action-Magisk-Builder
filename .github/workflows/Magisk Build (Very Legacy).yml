@@ -78,5 +78,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: magisk-binaries-${{ github.sha }}
-          path: Magisk/out
+          path: Magisk/out/binaries
           compression-level: 9
