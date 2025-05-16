@@ -32,21 +32,6 @@ jobs:
           git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk || true
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties || echo 'unknown')" >> $GITHUB_ENV
 
-      - name: Update Koin dependencies
-        continue-on-error: true
-        run: |
-          cd Magisk/app
-          sed -i 's/koin-core:2.1.6/koin-core:2.2.3/g' build.gradle || true
-          sed -i 's/koin-android:2.1.6/koin-android:2.2.3/g' build.gradle || true
-          sed -i 's/koin-androidx-viewmodel:2.1.6/koin-androidx-viewmodel:2.2.3/g' build.gradle || true
-
-      - name: Add Maven Central Repository
-        continue-on-error: true
-        run: |
-          sed -i "/repositories {/a mavenCentral()" Magisk/build.gradle
-          cd Magisk
-          sed -i "/repositories {/a mavenCentral()" build.gradle || true
-
       - name: Patch
         continue-on-error: true
         run: |
