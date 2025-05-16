@@ -67,7 +67,7 @@ jobs:
         run: |
           cd Magisk
           # Build only native binaries
-          ./build.py -vr magisk magiskinit magiskboot busybox
+          ./build.py -vr all
 
       - name: Collect binaries
         run: |
