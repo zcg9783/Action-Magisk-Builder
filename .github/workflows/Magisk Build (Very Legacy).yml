@@ -1,4 +1,4 @@
-name: Magisk Build (Very Legacy)
+name: Magisk Build (Binaries Only)
 
 on:
   workflow_dispatch:
@@ -10,17 +10,15 @@ on:
       MAGISK_BRANCH:
         description: 'Magisk Repository Branch'
         required: true
-        default: 'v21.4'
+        default: 'v22.1'
 
 jobs:
   build:
-    name: Build Magisk
+    name: Build Magisk Binaries
     runs-on: ubuntu-22.04
     env:
       SCCACHE_DIRECT: false
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    permissions:
-      contents: write
     strategy:
       fail-fast: false
     steps:
@@ -31,7 +29,12 @@ jobs:
         run: |
           git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties)" >> $GITHUB_ENV
-      
+
+      - name: Modify build.py to remove APK builds
+        run: |
+          sed -i '/build_apk/d' Magisk/build.py
+          sed -i '/self\.build_apk/d' Magisk/build.py
+
       - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
@@ -51,67 +54,30 @@ jobs:
           restore-keys: ${{ runner.os }}
           max-size: 10000M
 
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            !~/.gradle/caches/build-cache-*
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts') }}
-          restore-keys: ${{ runner.os }}-gradle-
-
-      - name: Cache build cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches/build-cache-*
-          key: ${{ runner.os }}-build-cache-${{ github.sha }}
-          restore-keys: ${{ runner.os }}-build-cache-
-
       - name: Set up NDK
         run: cd Magisk && python build.py -v ndk
         shell: bash  
 
-      - name: Setup environment [2]
+      - name: Setup environment
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
           sudo apt-get install --only-upgrade libstdc++6 -y
 
-      - name: Build release
-        run: cd Magisk && ./build.py -vr all
+      - name: Build binaries
+        run: |
+          cd Magisk
+          # Build only native binaries
+          ./build.py -vr magisk magiskinit magiskboot busybox
 
-      - name: Stop gradle daemon
-        run: cd Magisk && ./gradlew --stop
+      - name: Collect binaries
+        run: |
+          mkdir Magisk/out/binaries
+          cp -r Magisk/native/out/* Magisk/out/binaries/
 
-      - name: Upload build artifact
+      - name: Upload binaries artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.sha }}
+          name: magisk-binaries-${{ github.sha }}
           path: Magisk/out
           compression-level: 9
-
-      - name: Upload mapping and native debug symbols
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.sha }}-symbols
-          path: Magisk/app/build/outputs
-          compression-level: 9
-
-      - name: Upload to Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            Magisk/out/app-release.apk
-            Magisk/out/app-debug.apk
-          name: Unofficial Magisk Build Release v${{ env.MAGISK_VERS }}
-          tag_name: ${{ github.run_id }}
-          body: |
-            ## Resources
-            - [Magisk Repository](${{ inputs.MAGISK_REPO }}/tree/${{ inputs.MAGISK_BRANCH }})
-            ## Available Downloads
-            - Release, for normal usage.
-            - Debug, solely for debugging purposes.
-            ## Notes
-            - I, carlodandan, won't entertain any flashing/app/patching issue. Contact whoever the maintainer of the Magisk repository you used for building. Again, the builder you used is for personal use only. I am not responsible with any of the error upon flashing or patching.
