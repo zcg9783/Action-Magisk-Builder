@@ -50,8 +50,7 @@ jobs:
       - name: Patch
         continue-on-error: true
         run: |
-          cd Magisk
-          curl -o native/jni/core/bootstages.cpp https://vip.123pan.cn/1814215835/20321949
+          echo test
 
       - name: Set up JDK 11
         uses: actions/setup-java@v4
