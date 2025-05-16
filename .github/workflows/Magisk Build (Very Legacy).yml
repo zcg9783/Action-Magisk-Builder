@@ -40,6 +40,13 @@ jobs:
           sed -i 's/koin-android:2.1.6/koin-android:2.2.3/g' build.gradle || true
           sed -i 's/koin-androidx-viewmodel:2.1.6/koin-androidx-viewmodel:2.2.3/g' build.gradle || true
 
+      - name: Add Maven Central Repository
+        continue-on-error: true
+        run: |
+          sed -i "/repositories {/a mavenCentral()" Magisk/build.gradle
+          cd Magisk
+          sed -i "/repositories {/a mavenCentral()" build.gradle || true
+
       - name: Patch
         continue-on-error: true
         run: |
