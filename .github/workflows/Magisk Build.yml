@@ -100,6 +100,7 @@ jobs:
 
 
       - name: Stop gradle daemon
+        continue-on-error: true
         run: cd Magisk && ./gradlew --stop
 
       - name: Upload build artifact
