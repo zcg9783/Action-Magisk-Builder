@@ -33,7 +33,7 @@ jobs:
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties || echo 'unknown')" >> $GITHUB_ENV
 
       - name: Setup Rust (1.74+)
-        uses: actions-rust-lang/setup-rust@v1
+        uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: 1.74
