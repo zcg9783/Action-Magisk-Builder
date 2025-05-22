@@ -19,6 +19,7 @@ jobs:
     env:
       SCCACHE_DIRECT: false
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PATH: $HOME/.cargo/bin:$PATH
     permissions:
       contents: write
     strategy:
@@ -32,24 +33,28 @@ jobs:
           git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk || true
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties || echo 'unknown')" >> $GITHUB_ENV
 
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: rustfmt, clippy
+          override: true
+
+      - name: Install build essentials
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev libclang-dev
+
+      - name: Install cxxbridge
+        run: cargo install cxxbridge-cmd
+
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
           java-version: "17"
-
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          components: rustfmt, clippy
-
-      - name: Install cxxbridge dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y pkg-config libssl-dev
-          cargo install cxxbridge-cmd
 
       - name: Set up Python 3
         uses: actions/setup-python@v5
