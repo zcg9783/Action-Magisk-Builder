@@ -19,7 +19,6 @@ jobs:
     env:
       SCCACHE_DIRECT: false
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      PATH: $HOME/.cargo/bin:$PATH
     permissions:
       contents: write
     strategy:
