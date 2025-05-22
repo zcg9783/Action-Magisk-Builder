@@ -42,7 +42,7 @@ jobs:
         env:
           ACTIONS_ALLOW_UNSUPPORTED_SOLVER: 1
 
-     - name: Install cxxbridge dependencies
+      - name: Install cxxbridge dependencies
         run: |
           sudo apt-get install -y \
             libssl-dev \
