@@ -32,7 +32,7 @@ jobs:
           git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk || true
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties || echo 'unknown')" >> $GITHUB_ENV
 
-       - name: Setup Rust (1.74+)
+      - name: Setup Rust (1.74+)
         uses: actions-rust-lang/setup-rust@v1
         with:
           profile: minimal
@@ -41,7 +41,6 @@ jobs:
           override: true
         env:
           ACTIONS_ALLOW_UNSUPPORTED_SOLVER: 1
-
 
       - name: Install cxxbridge dependencies
         run: |
@@ -94,7 +93,7 @@ jobs:
 
       - name: Set up NDK
         run: cd Magisk && python build.py -v ndk
-        shell: bash  
+        shell: bash
 
       - name: Setup environment
         run: |
