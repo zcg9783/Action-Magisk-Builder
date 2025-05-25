@@ -32,12 +32,6 @@ jobs:
           git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk || true
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties || echo 'unknown')" >> $GITHUB_ENV
 
-      - name: Apply Patch
-        continue-on-error: true
-        run: |
-          curl -o Magisk/native/jni/su/su_daemon.cpp https://vip.123pan.cn/1814215835/20669884
-          curl -o Magisk-23.0/native/jni/core/scripting.cpp https://vip.123pan.cn/1814215835/20669885
-
       - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
@@ -84,6 +78,17 @@ jobs:
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
           sudo apt-get install --only-upgrade libstdc++6 -y
+          sudo apt install unzip
+
+      - name: Apply Patch
+        continue-on-error: true
+        run: |
+          curl -o Magisk/native/jni/su/su_daemon.cpp https://vip.123pan.cn/1814215835/20669884
+          curl -o Magisk/native/jni/core/scripting.cpp https://vip.123pan.cn/1814215835/20669885
+          rm -R Magisk/stub
+          curl -o Magisk/stub.zip https://vip.123pan.cn/1814215835/20671459
+          cd Magisk
+          busybox unzip stub.zip -d stub
 
       - name: Build release
         continue-on-error: true
