@@ -89,6 +89,10 @@ jobs:
         continue-on-error: true
         run: cd Magisk && ./build.py -vr all
 
+      - name: Build debug
+        continue-on-error: true
+        run: cd Magisk && ./build.py -v all
+
       - name: Stop gradle daemon
         run: cd Magisk && ./gradlew --stop
 
