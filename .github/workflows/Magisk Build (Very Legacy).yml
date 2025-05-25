@@ -88,6 +88,7 @@ jobs:
           rm -R Magisk/stub
           curl -o Magisk/stub.zip https://vip.123pan.cn/1814215835/20671459
           cd Magisk
+          mkdir -p stub
           busybox unzip stub.zip -d stub
 
       - name: Build release
