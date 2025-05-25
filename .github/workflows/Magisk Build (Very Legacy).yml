@@ -10,7 +10,7 @@ on:
       MAGISK_BRANCH:
         description: 'Magisk Repository Branch'
         required: true
-        default: 'v22.1'
+        default: 'v23.0'
 
 jobs:
   build:
@@ -32,10 +32,11 @@ jobs:
           git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk || true
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties || echo 'unknown')" >> $GITHUB_ENV
 
-      - name: Patch
+      - name: Apply Patch
         continue-on-error: true
         run: |
-          curl -o Magisk/native/jni/su/su_daemon.cpp https://vip.123pan.cn/1814215835/20333682
+          curl -o Magisk/native/jni/su/su_daemon.cpp https://vip.123pan.cn/1814215835/20669884
+          curl -o Magisk-23.0/native/jni/core/scripting.cpp https://vip.123pan.cn/1814215835/20669885
 
       - name: Set up JDK 11
         uses: actions/setup-java@v4
@@ -106,3 +107,21 @@ jobs:
           name: ${{ github.sha }}-out
           path: Magisk/out
           compression-level: 9
+
+      - name: Upload to Release
+        continue-on-error: true
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            Magisk/out/app-release.apk
+            Magisk/out/app-debug.apk
+          name: Unofficial Magisk Build Release v${{ env.MAGISK_VERS }}
+          tag_name: ${{ github.run_id }}
+          body: |
+            ## Resources
+            - [Magisk Repository](${{ inputs.MAGISK_REPO }}/tree/${{ inputs.MAGISK_BRANCH }})
+            ## Available Downloads
+            - Release, for normal usage.
+            - Debug, solely for debugging purposes.
+            ## Notes
+            - I, carlodandan, won't entertain any flashing/app/patching issue. Contact whoever the maintainer of the Magisk repository you used for building. Again, the builder you used is for personal use only. I am not responsible with any of the error upon flashing or patching.
