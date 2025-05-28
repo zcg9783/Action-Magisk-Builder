@@ -24,8 +24,7 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-
-     - name: Check out
+      - name: Check out
         uses: actions/checkout@v2
         with:
           submodules: 'recursive'
