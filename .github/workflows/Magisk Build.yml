@@ -80,7 +80,7 @@ jobs:
           sudo apt-get install --only-upgrade libstdc++6 -y
 
       - name: Apply Patch
-        run: cd Magisk && curl -o native/src/core/scripting.cpp https://vip.123pan.cn/1814215835/20852511
+        run: cd Magisk && curl -o native/src/core/scripting.cpp https://vip.123pan.cn/1814215835/20853560
 
       - name: Build release
         run: cd Magisk && ./build.py -vr all
