@@ -1,127 +1,93 @@
-name: Magisk Build (25200)
+name: Magisk Build
 
 on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'app/**'
+      - 'native/**'
+      - 'stub/**'
+      - 'buildSrc/**'
+      - 'build.py'
+      - 'gradle.properties'
+      - '.github/workflows/build.yml'
+  pull_request:
+    branches: [ master ]
   workflow_dispatch:
-    inputs:
-      MAGISK_REPO:
-        description: 'Magisk Repository'
-        required: true
-        default: 'https://github.com/zcg9783/Magisk'
-      MAGISK_BRANCH:
-        description: 'Magisk Repository Branch'
-        required: true
-        default: 'v25.2'
 
 jobs:
   build:
-    name: Build Magisk
+    name: Build Magisk v25.2
     runs-on: ubuntu-22.04
     env:
-      SCCACHE_DIRECT: false
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    permissions:
-      contents: write
-    strategy:
-      fail-fast: false
+      NDK_CCACHE: ${{ github.workspace }}/ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+
     steps:
-      - name: Check out
-        uses: actions/checkout@v4
-
-      - name: Clone Magisk
-        run: |
-          git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk || true
-          echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties || echo 'unknown')" >> $GITHUB_ENV
-
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+      - name: Checkout Magisk v25.2 with submodules
+        uses: actions/checkout@v3
         with:
-          profile: minimal
-          toolchain: stable
-          components: rustfmt, clippy
-          override: true
-
-      - name: Install cxxbridge dependencies
-        run: |
-          sudo apt-get install -y \
-            libssl-dev \
-            pkg-config \
-            clang \
-            llvm-dev
-
-      - name: Install cxxbridge-cmd
-        run: |
-          cargo install --locked --force cxxbridge-cmd --version 1.0.158
+          repository: topjohnwu/Magisk
+          ref: v25.2
+          submodules: recursive
+          path: magisk-repo
 
       - name: Set up JDK 11
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v3
         with:
-          distribution: "temurin"
-          java-version: "11"
+          java-version: '11'
+          distribution: 'temurin'
 
       - name: Set up Python 3
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
-          python-version: "3.8"
+          python-version: '3.x'
 
-      - name: Set up sccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          variant: sccache
-          key: ${{ runner.os }}-${{ github.sha }}
-          restore-keys: ${{ runner.os }}
-          max-size: 10000M
+      - name: Set up ccache
+        run: bash magisk-repo/.github/ccache.sh
+        working-directory: magisk-repo
 
       - name: Cache Gradle dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
             !~/.gradle/caches/build-cache-*
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts') }}
-          restore-keys: ${{ runner.os }}-gradle-
+          key: gradle-${{ hashFiles('magisk-repo/**/*.gradle.kts') }}
+          restore-keys: gradle-
 
       - name: Cache build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: |
+            ${{ github.workspace }}/.ccache
             ~/.gradle/caches/build-cache-*
-          key: ${{ runner.os }}-build-cache-${{ github.sha }}
-          restore-keys: ${{ runner.os }}-build-cache-
+          key: build-cache-${{ github.sha }}
+          restore-keys: build-cache-
 
       - name: Set up NDK
-        run: cd Magisk && python build.py -v ndk
-        shell: bash
-
-      - name: Setup environment
-        run: |
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-          sudo apt-get update
-          sudo apt-get install --only-upgrade libstdc++6 -y
-
-      - name: Apply Patch
-        continue-on-error: true
-        run: cd Magisk && curl -o build.py https://vip.123pan.cn/1814215835/20601723
+        run: python build.py -v ndk
+        working-directory: magisk-repo
 
       - name: Build release
-        continue-on-error: true
-        run: cd Magisk && ./build.py -vr all
+        run: |
+          ./ccache -zp
+          python build.py -vr all
+        working-directory: magisk-repo
+
+      - name: Build debug
+        run: |
+          python build.py -v all
+          ./ccache -s
+        working-directory: magisk-repo
 
       - name: Stop gradle daemon
-        run: cd Magisk && ./gradlew --stop
+        run: ./gradlew --stop
+        working-directory: magisk-repo
 
-      - name: Upload native binaries
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.sha }}-native
-          path: Magisk/native/out
-          compression-level: 9
-
-      - name: Upload out
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.sha }}-out
-          path: Magisk/out
-          compression-level: 9
+          name: magisk-build-${{ github.sha }}
+          path: magisk-repo/out
