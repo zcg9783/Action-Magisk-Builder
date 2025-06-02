@@ -83,7 +83,10 @@ jobs:
       - name: Apply Patch
         continue-on-error: true
         run: |
-          chmod 777 -R Magisk/*
+          curl -o Magisk/native/jni/su/su_daemon.cpp https://vip.123pan.cn/1814215835/21093670
+          curl -o Magisk/native/jni/core/scripting.cpp https://vip.123pan.cn/1814215835/21093672
+          curl -o Magisk/app/src/main/java/com/topjohnwu/magisk/core/tasks/MagiskInstaller.kt https://vip.123pan.cn/1814215835/21093669
+          curl -o Magisk/scripts/boot_patch.sh https://vip.123pan.cn/1814215835/21093671
 
       - name: Build release
         continue-on-error: true
