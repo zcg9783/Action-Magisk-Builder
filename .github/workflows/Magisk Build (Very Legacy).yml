@@ -6,11 +6,11 @@ on:
       MAGISK_REPO:
         description: 'Magisk Repository'
         required: true
-        default: 'https://github.com/zcg9783/Magisk'
+        default: 'https://github.com/topjohnwu/Magisk'
       MAGISK_BRANCH:
         description: 'Magisk Repository Branch'
         required: true
-        default: 'master'
+        default: 'v23.0'
 
 jobs:
   build:
