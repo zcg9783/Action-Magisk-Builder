@@ -83,8 +83,7 @@ jobs:
       - name: Apply Patch
         continue-on-error: true
         run: |
-          chmod +x Magisk/gradlew
-          chmod +x Magisk/build.py
+          chmod 777 -R Magisk/*
 
       - name: Build release
         continue-on-error: true
