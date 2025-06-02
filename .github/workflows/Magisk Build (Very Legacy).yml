@@ -10,7 +10,7 @@ on:
       MAGISK_BRANCH:
         description: 'Magisk Repository Branch'
         required: true
-        default: 'v23.0'
+        default: 'master'
 
 jobs:
   build:
