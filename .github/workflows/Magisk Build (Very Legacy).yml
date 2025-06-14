@@ -87,10 +87,10 @@ jobs:
         continue-on-error: true
         run: |
           cd Magisk
-          curl -o https://vip.123pan.cn/1814215835/21349459 native/jni/core/scripting.cpp
-          curl -o https://vip.123pan.cn/1814215835/21349460 scripts/boot_patch.sh
-          curl -o https://vip.123pan.cn/1814215835/21349461 app/src/main/java/com/topjohnwu/magisk/core/tasks/MagiskInstaller.kt
-          curl -o https://vip.123pan.cn/1814215835/21349469 app/src/main/assets/stub.apk
+          curl -o native/jni/core/scripting.cpp https://vip.123pan.cn/1814215835/21349459
+          curl -o scripts/boot_patch.sh https://vip.123pan.cn/1814215835/21349460
+          curl -o app/src/main/java/com/topjohnwu/magisk/core/tasks/MagiskInstaller.kt https://vip.123pan.cn/1814215835/21349461
+          curl -o app/src/main/assets/stub.apk https://vip.123pan.cn/1814215835/21349469
 
       - name: Build release
         continue-on-error: true
@@ -98,7 +98,10 @@ jobs:
 
       - name: Build debug
         continue-on-error: true
-        run: cd Magisk && ./build.py -v all
+        run: cd Magisk && ./build.py -v all && mv out/app-debug.apk out/
+
+      - name: Patch2
+        run: cd Magisk && ./gradlew --stop
 
       - name: Stop gradle daemon
         run: cd Magisk && ./gradlew --stop
