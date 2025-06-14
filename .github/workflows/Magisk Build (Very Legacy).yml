@@ -94,14 +94,22 @@ jobs:
 
       - name: Build release
         continue-on-error: true
+        run: cd Magisk && ./build.py -vr all && mv out/app-release.apk out/napp-release.apk
+
+      - name: Build debug
+        continue-on-error: true
+        run: cd Magisk && ./build.py -v all && mv out/app-debug.apk out/napp-debug.apk
+
+      - name: Patch2
+        run: cd Magisk && echo 1
+
+     - name: Build release
+        continue-on-error: true
         run: cd Magisk && ./build.py -vr all
 
       - name: Build debug
         continue-on-error: true
-        run: cd Magisk && ./build.py -v all && mv out/app-debug.apk out/
-
-      - name: Patch2
-        run: cd Magisk && ./gradlew --stop
+        run: cd Magisk && ./build.py -v all
 
       - name: Stop gradle daemon
         run: cd Magisk && ./gradlew --stop
@@ -129,6 +137,8 @@ jobs:
           files: |
             Magisk/out/app-release.apk
             Magisk/out/app-debug.apk
+            Magisk/out/napp-release.apk
+            Magisk/out/napp-debug.apk
           name: Unofficial Magisk Build Release v${{ env.MAGISK_VERS }}
           tag_name: ${{ github.run_id }}
           body: |
