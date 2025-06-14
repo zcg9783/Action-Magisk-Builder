@@ -30,6 +30,7 @@ jobs:
       - name: Clone Magisk
         run: |
           git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk || true
+          git checkout 0ab31ab0df0f3f91225cc16bc3beda229d610c74
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties || echo 'unknown')" >> $GITHUB_ENV
 
       - name: Set up JDK 11
