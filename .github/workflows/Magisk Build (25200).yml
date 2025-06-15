@@ -32,6 +32,13 @@ jobs:
           git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties)" >> $GITHUB_ENV
 
+      - name: Set up Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: rust-src
+          profile: minimal
+
       - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
@@ -85,23 +92,13 @@ jobs:
         run: |
           cd Magisk
           echo 1
-##
-##      - name: Build release
-##        run: cd Magisk && ./build.py -vr all && mv out/##app-release.apk out/napp-release.apk
 
       - name: Build debug
-        run: cd Magisk && sed -i "s|env\['CARGO_BUILD_RUSTC'\] = op.join(rust_bin, 'rustc' + EXE_EXT)|# &|" build.py && sed -i "/run_cargo_build/a\\    system('rustup component add rust-src')" build.py && ./build.py -v all && mv out/app-debug.apk out/napp-debug.apk
-
-##      - name: Patch2
-##       run: cd Magisk && echo 1
-##
-##      - name: Build release
-##        continue-on-error: true
-##        run: cd Magisk && ./build.py -vr all
-##
-##      - name: Build debug
-##        continue-on-error: true
-##        run: cd Magisk && ./build.py -v all
+        run: |
+          cd Magisk        
+          sed -i "s|env\['CARGO_BUILD_RUSTC'\] = op.join(rust_bin, 'rustc' + EXE_EXT)|# &|" build.py
+          ./build.py -v all
+          mv out/app-debug.apk out/napp-debug.apk
 
       - name: Stop gradle daemon
         run: cd Magisk && ./gradlew --stop
