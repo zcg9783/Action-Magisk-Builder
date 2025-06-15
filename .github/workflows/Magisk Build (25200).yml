@@ -1,4 +1,4 @@
-name: Magisk Build (25200)
+name: Magisk Build (Very Legacy)
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
       MAGISK_REPO:
         description: 'Magisk Repository'
         required: true
-        default: 'https://github.com/zcg9783/Magisk'
+        default: 'https://github.com/topjohnwu/Magisk'
       MAGISK_BRANCH:
         description: 'Magisk Repository Branch'
         required: true
@@ -25,31 +25,37 @@ jobs:
       fail-fast: false
     steps:
       - name: Check out
-        uses: actions/checkout@v2
-        with:
-          submodules: 'recursive'
-          fetch-depth: 0
+        uses: actions/checkout@v4
 
       - name: Clone Magisk
         run: |
-          git clone --recurse-submodules https://github.com/topjohnwu/Magisk -b v25.2 ./Magisk
-          echo "MAGISK_VERS=25200" >> $GITHUB_ENV
+          git clone https://github.com/topjohnwu/Magisk -b master ./Magisk || true
+          cd Magisk
+          git checkout 8aaa45c62a204af35da9d5366dc8b6698b1d043b
+          git submodule update --init --recursive --force
+          echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' gradle.properties || echo 'unknown')" >> $GITHUB_ENV
 
       - name: Set up JDK 11
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v4
         with:
-          java-version: '11'
+          distribution: "temurin"
+          java-version: "11"
 
       - name: Set up Python 3
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: "3.8"
 
-      - name: Set up ccache
-        run: bash .github/ccache.sh
+      - name: Set up sccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          variant: sccache
+          key: ${{ runner.os }}-${{ github.sha }}
+          restore-keys: ${{ runner.os }}
+          max-size: 10000M
 
       - name: Cache Gradle dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -59,29 +65,54 @@ jobs:
           restore-keys: ${{ runner.os }}-gradle-
 
       - name: Cache build cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
-            ${{ github.workspace }}/.ccache
             ~/.gradle/caches/build-cache-*
           key: ${{ runner.os }}-build-cache-${{ github.sha }}
           restore-keys: ${{ runner.os }}-build-cache-
 
       - name: Set up NDK
-        run: python Magisk/build.py -v ndk
+        run: cd Magisk && python build.py -v ndk
+        shell: bash  
+
+      - name: Setup environment
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          sudo apt-get update
+          sudo apt-get install --only-upgrade libstdc++6 -y
+          sudo apt install unzip
+
+      - name: Apply Patch
+        continue-on-error: true
+        run: |
+          cd Magisk
+          curl -o native/jni/core/scripting.cpp https://vip.123pan.cn/1814215835/21349459
+          curl -o scripts/boot_patch.sh https://vip.123pan.cn/1814215835/21349460
+          curl -o app/src/main/java/com/topjohnwu/magisk/core/tasks/MagiskInstaller.kt https://vip.123pan.cn/1814215835/21349461
+          curl -o app/src/main/assets/stub.apk https://vip.123pan.cn/1814215835/21349469
 
       - name: Build release
-        run: |
-          ./ccache -zp
-          python Magisk/build.py -vr all
+        continue-on-error: true
+        run: cd Magisk && ./build.py -vr all && mv out/app-release.apk out/napp-release.apk
 
       - name: Build debug
-        run: |
-          python Magisk/build.py -v all
-          ./ccache -s
+        continue-on-error: true
+        run: cd Magisk && ./build.py -v all && mv out/app-debug.apk out/napp-debug.apk
+
+      - name: Patch2
+        run: cd Magisk && curl -o native/jni/su/su_daemon.cpp https://vip.123pan.cn/1814215835/21350272
+
+      - name: Build release
+        continue-on-error: true
+        run: cd Magisk && ./build.py -vr all
+
+      - name: Build debug
+        continue-on-error: true
+        run: cd Magisk && ./build.py -v all
 
       - name: Stop gradle daemon
-        run: ./gradlew --stop
+        run: cd Magisk && ./gradlew --stop
 
       - name: Upload native binaries
         if: always()
@@ -106,6 +137,8 @@ jobs:
           files: |
             Magisk/out/app-release.apk
             Magisk/out/app-debug.apk
+            Magisk/out/napp-release.apk
+            Magisk/out/napp-debug.apk
           name: Unofficial Magisk Build Release v${{ env.MAGISK_VERS }}
           tag_name: ${{ github.run_id }}
           body: |
