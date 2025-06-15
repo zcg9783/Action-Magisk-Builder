@@ -90,7 +90,7 @@ jobs:
 ##        run: cd Magisk && ./build.py -vr all && mv out/##app-release.apk out/napp-release.apk
 
       - name: Build debug
-        run: cd Magisk && sed -i "s|env\['CARGO_BUILD_RUSTC'\] = op.join(rust_bin, 'rustc' + EXE_EXT)|# &|" build.py && ./build.py -v all && mv out/app-debug.apk out/napp-debug.apk
+        run: cd Magisk && sed -i "s|env\['CARGO_BUILD_RUSTC'\] = op.join(rust_bin, 'rustc' + EXE_EXT)|# &|" build.py && sed -i "/run_cargo_build/a\\    system('rustup component add rust-src')" build.py && ./build.py -v all && mv out/app-debug.apk out/napp-debug.apk
 
 ##      - name: Patch2
 ##       run: cd Magisk && echo 1
