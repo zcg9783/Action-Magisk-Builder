@@ -35,7 +35,7 @@ jobs:
       - name: Set up Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: "nightly"
+          toolchain: "nightly-2024-01-01"  # 使用更旧的 nightly 版本
           components: rust-src
           profile: minimal
 
@@ -80,11 +80,15 @@ jobs:
         run: cd Magisk && python build.py -v ndk
         shell: bash
 
-      - name: Verify NDK structure
+      - name: Patch NDK build scripts
         run: |
-          echo "Checking NDK structure:"
-          ls -la /usr/local/lib/android/sdk/ndk/magisk/toolchains
-          ls -la /usr/local/lib/android/sdk/ndk/magisk/toolchains/rust || true
+          # 添加 -opaque-pointers 标志到链接器
+          find /usr/local/lib/android/sdk/ndk/magisk -name 'build-binary.mk' -exec \
+            sed -i '/LOCAL_LDFLAGS :=/ s/$/ -opaque-pointers/' {} \;
+          
+          # 添加 -opaque-pointers 标志到编译器
+          find /usr/local/lib/android/sdk/ndk/magisk -name 'build-binary.mk' -exec \
+            sed -i '/LOCAL_CPPFLAGS :=/ s/$/ -opaque-pointers/' {} \;
 
       - name: Create Rust toolchain symlinks
         run: |
@@ -92,16 +96,13 @@ jobs:
           cargo_path=$(which cargo)
           rust_dir="/usr/local/lib/android/sdk/ndk/magisk/toolchains/rust/bin"
           
-          # 确保目录存在
           sudo mkdir -p "$rust_dir"
-          
-          # 创建符号链接
           sudo ln -sf "$rustc_path" "$rust_dir/rustc"
           sudo ln -sf "$cargo_path" "$rust_dir/cargo"
           
-          echo "Created symlinks:"
+          echo "Rust toolchain symlinks created:"
           ls -la "$rust_dir"
-          echo "New Magisk rustc version:"
+          echo "Magisk rustc version:"
           "$rust_dir/rustc" --version
 
       - name: Setup environment
@@ -120,9 +121,10 @@ jobs:
       - name: Build debug
         run: |
           cd Magisk
-          rustup default nightly
-          # 添加不透明指针支持
-          find native/src -name 'Android.mk' -exec sh -c 'echo "buildFlags += [\"-opaque-pointers\"]" >> {}' \;
+          # 设置旧版 Rust nightly
+          rustup default nightly-2024-01-01
+          # 强制设置兼容性标志
+          export RUSTFLAGS="-C link-arg=-opaque-pointers"
           ./build.py -v all
 
       - name: Stop gradle daemon
