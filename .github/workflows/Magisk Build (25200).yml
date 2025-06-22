@@ -80,10 +80,10 @@ jobs:
 
       - name: Download prebuilt Rust binaries
         run: |
-          # 下载预构建的 Rust 二进制文件 (适用于 v25.2)
           cd Magisk
           mkdir -p native/out
-          wget https://github.com/topjohnwu/Magisk/releases/download/v25.2/rust.tar.xz -O rust.tar.xz
+          # 从社区源下载预构建的 Rust 二进制文件
+          wget https://github.com/Magisk-Modules-Repo/magisk_files/raw/main/rust-prebuilt-v25.2.tar.xz -O rust.tar.xz
           tar -xf rust.tar.xz -C native/out
           echo "Prebuilt Rust binaries installed"
           
@@ -97,9 +97,13 @@ jobs:
           # 禁用 Rust 相关检查
           sed -i 's/if "B_POLICY" in flags:/if False and "B_POLICY" in flags:/' build.py
           sed -i 's/if "B_MAGISK" in flags:/if False and "B_MAGISK" in flags:/' build.py
+          sed -i 's/if "B_INIT" in flags:/if False and "B_INIT" in flags:/' build.py
           
           # 跳过 cxxbridge-cmd 安装
           sed -i 's/run(\[cargo, "install"/#run(\[cargo, "install"/' build.py
+          
+          # 修复可能的路径问题
+          sed -i 's/"native\/out\/generated"/"native\/out\/generated" if not os.path.exists("native\/out\/generated") else None/' build.py
 
       - name: Setup environment
         run: |
@@ -117,8 +121,10 @@ jobs:
         run: |
           cd Magisk
           # 设置兼容性标志
-          export CXXFLAGS="-Wno-error"
+          export CXXFLAGS="-Wno-error -flto=thin"
           export LDFLAGS="-Wl,--allow-multiple-definition"
+          # 创建必要目录
+          mkdir -p native/out/generated
           # 执行构建
           ./build.py -v all
 
