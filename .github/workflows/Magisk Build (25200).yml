@@ -15,10 +15,16 @@ on:
 jobs:
   build:
     name: Build Magisk
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04  # 使用更兼容的 Ubuntu 22.04
     env:
       SCCACHE_DIRECT: false
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # 关键环境变量
+      CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUST_BACKTRACE: "short"
+      ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/magisk
+      ANDROID_NDK_ROOT: /usr/local/lib/android/sdk/ndk/magisk
     permissions:
       contents: write
     strategy:
@@ -33,11 +39,10 @@ jobs:
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties)" >> $GITHUB_ENV
 
       - name: Set up Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "nightly-2024-01-01"  # 使用更旧的 nightly 版本
+          toolchain: nightly-2023-06-01  # 2023年6月的稳定版本
           components: rust-src
-          profile: minimal
 
       - name: Set up JDK 11
         uses: actions/setup-java@v4
@@ -50,6 +55,11 @@ jobs:
         with:
           python-version: "3.8"
 
+      - name: Install essential build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev unzip zlib1g-dev
+
       - name: Set up sccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -57,6 +67,15 @@ jobs:
           key: ${{ runner.os }}-${{ github.sha }}
           restore-keys: ${{ runner.os }}
           max-size: 10000M
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
       - name: Cache Gradle dependencies
         uses: actions/cache@v4
@@ -68,49 +87,25 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts') }}
           restore-keys: ${{ runner.os }}-gradle-
 
-      - name: Cache build cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches/build-cache-*
-          key: ${{ runner.os }}-build-cache-${{ github.sha }}
-          restore-keys: ${{ runner.os }}-build-cache-
-
       - name: Set up NDK
         run: cd Magisk && python build.py -v ndk
         shell: bash
 
-      - name: Patch NDK build scripts
+      - name: Pre-install cxxbridge-cmd
         run: |
-          # 添加 -opaque-pointers 标志到链接器
-          find /usr/local/lib/android/sdk/ndk/magisk -name 'build-binary.mk' -exec \
-            sed -i '/LOCAL_LDFLAGS :=/ s/$/ -opaque-pointers/' {} \;
-          
-          # 添加 -opaque-pointers 标志到编译器
-          find /usr/local/lib/android/sdk/ndk/magisk -name 'build-binary.mk' -exec \
-            sed -i '/LOCAL_CPPFLAGS :=/ s/$/ -opaque-pointers/' {} \;
-
-      - name: Create Rust toolchain symlinks
-        run: |
-          rustc_path=$(which rustc)
-          cargo_path=$(which cargo)
-          rust_dir="/usr/local/lib/android/sdk/ndk/magisk/toolchains/rust/bin"
-          
-          sudo mkdir -p "$rust_dir"
-          sudo ln -sf "$rustc_path" "$rust_dir/rustc"
-          sudo ln -sf "$cargo_path" "$rust_dir/cargo"
-          
-          echo "Rust toolchain symlinks created:"
-          ls -la "$rust_dir"
-          echo "Magisk rustc version:"
-          "$rust_dir/rustc" --version
+          # 在系统环境中构建并安装cxxbridge-cmd
+          cargo install cxxbridge-cmd --version 1.0.158 -j $(nproc) --force
+          # 将cxxbridge复制到Magisk构建目录中
+          mkdir -p /usr/local/lib/android/sdk/ndk/magisk/toolchains/rust/bin
+          cp ~/.cargo/bin/cxxbridge /usr/local/lib/android/sdk/ndk/magisk/toolchains/rust/bin/
+          echo "cxxbridge installed at:"
+          /usr/local/lib/android/sdk/ndk/magisk/toolchains/rust/bin/cxxbridge --version
 
       - name: Setup environment
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
           sudo apt-get install --only-upgrade libstdc++6 -y
-          sudo apt install unzip
 
       - name: Apply Patch
         continue-on-error: true
@@ -118,31 +113,21 @@ jobs:
           cd Magisk
           echo 1
 
-      - name: Build debug
+      - name: Build all
         run: |
           cd Magisk
-          # 设置旧版 Rust nightly
-          rustup default nightly-2024-01-01
-          # 强制设置兼容性标志
-          export RUSTFLAGS="-C link-arg=-opaque-pointers"
+          # 设置兼容性标志
+          export RUSTFLAGS="-C link-arg=-Wl,--allow-multiple-definition"
+          # 执行完整构建
           ./build.py -v all
 
       - name: Stop gradle daemon
         run: cd Magisk && ./gradlew --stop
 
-      - name: Upload native binaries
-        if: always()
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.sha }}-native
-          path: Magisk/native/out
-          compression-level: 9
-
-      - name: Upload out
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.sha }}-out
+          name: magisk-build-${{ github.run_id }}
           path: Magisk/out
           compression-level: 9
 
@@ -153,15 +138,13 @@ jobs:
           files: |
             Magisk/out/app-release.apk
             Magisk/out/app-debug.apk
-            Magisk/out/napp-release.apk
-            Magisk/out/napp-debug.apk
-          name: Unofficial Magisk Build Release v${{ env.MAGISK_VERS }}
-          tag_name: ${{ github.run_id }}
+          name: Unofficial Magisk Build v${{ env.MAGISK_VERS }}
+          tag_name: build-${{ github.run_id }}
           body: |
-            ## Resources
-            - [Magisk Repository](${{ inputs.MAGISK_REPO }}/tree/${{ inputs.MAGISK_BRANCH }})
-            ## Available Downloads
-            - Release, for normal usage.
-            - Debug, solely for debugging purposes.
+            ## Magisk ${{ env.MAGISK_VERS }} (v25.2)
+            **Built on**: ${{ github.event.repository.updated_at }}
+            **Commit**: ${{ github.sha }}
+            
             ## Notes
-            - I, carlodandan, won't entertain any flashing/app/patching issue. Contact whoever the maintainer of the Magisk repository you used for building. Again, the builder you used is for personal use only. I am not responsible with any of the error upon flashing or patching.
+            This is an unofficial build for testing and development purposes.
+            Report issues to the original repository maintainers.
