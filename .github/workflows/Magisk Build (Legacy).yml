@@ -98,7 +98,7 @@ jobs:
           sudo apt-get install --only-upgrade libstdc++6 -y
 
       - name: Build release
-        run: cd Magisk && ./build.py -v all && mv out/app-release.apk out/napp-release.apk
+        run: cd Magisk && ./build.py -vr all && mv out/app-release.apk out/napp-release.apk
 
       - name: Build debug
         run: cd Magisk && ./build.py -v all && mv out/app-debug.apk out/napp-debug.apk
@@ -110,7 +110,7 @@ jobs:
           curl -o ${{ inputs.PATCH_FILE2 }} ${{ inputs.PATCH_URL2 }}
 
       - name: Build release
-        run: cd Magisk && ./build.py -v all
+        run: cd Magisk && ./build.py -vr all
 
       - name: Build debug
         run: cd Magisk && ./build.py -v all
