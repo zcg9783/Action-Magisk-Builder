@@ -35,7 +35,7 @@ jobs:
       - name: Set up Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: "nightly"  # 切换到 nightly 工具链
+          toolchain: "nightly"
           components: rust-src
           profile: minimal
 
@@ -76,9 +76,28 @@ jobs:
           key: ${{ runner.os }}-build-cache-${{ github.sha }}
           restore-keys: ${{ runner.os }}-build-cache-
 
-      - name: Set up NDK
-        run: cd Magisk && python build.py -v ndk
-        shell: bash
+      - name: Install Android NDK
+        run: |
+          # 安装最新版 NDK
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          sudo $SDKMANAGER --install "ndk;26.4.0"
+          
+          # 设置环境变量
+          echo "NDK_HOME=$ANDROID_HOME/ndk/26.4.0" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.4.0" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/26.4.0" >> $GITHUB_ENV
+
+      - name: Override Magisk NDK
+        run: |
+          # 备份原始 NDK
+          sudo mv /usr/local/lib/android/sdk/ndk/magisk /usr/local/lib/android/sdk/ndk/magisk.bak
+          
+          # 创建符号链接到新 NDK
+          sudo ln -s $ANDROID_HOME/ndk/26.4.0 /usr/local/lib/android/sdk/ndk/magisk
+          
+          # 验证 NDK 版本
+          echo "New NDK version:"
+          /usr/local/lib/android/sdk/ndk/magisk/ndk-build --version
 
       - name: Override Magisk NDK Rust
         run: |
@@ -111,8 +130,9 @@ jobs:
       - name: Build debug
         run: |
           cd Magisk
-          # 设置 nightly 工具链为默认
           rustup default nightly
+          # 添加不透明指针支持
+          echo "buildFlags += [\"-opaque-pointers\"]" >> native/src/jni/Android.mk
           ./build.py -v all
 
       - name: Stop gradle daemon
