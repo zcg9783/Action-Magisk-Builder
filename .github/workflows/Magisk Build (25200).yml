@@ -45,7 +45,6 @@ jobs:
           distribution: "temurin"
           java-version: "11"
 
-
       - name: Set up Python 3
         uses: actions/setup-python@v5
         with:
@@ -79,7 +78,22 @@ jobs:
 
       - name: Set up NDK
         run: cd Magisk && python build.py -v ndk
-        shell: bash  
+        shell: bash
+
+      - name: Override Magisk NDK Rust
+        run: |
+          rustc_path=$(which rustc)
+          cargo_path=$(which cargo)
+          rust_dir="/usr/local/lib/android/sdk/ndk/magisk/toolchains/rust/bin"
+          
+          sudo mv "$rust_dir/rustc" "$rust_dir/rustc.bak" || true
+          sudo mv "$rust_dir/cargo" "$rust_dir/cargo.bak" || true
+          
+          sudo ln -sf "$rustc_path" "$rust_dir/rustc"
+          sudo ln -sf "$cargo_path" "$rust_dir/cargo"
+          
+          echo "New Magisk rustc version:"
+          "$rust_dir/rustc" --version
 
       - name: Setup environment
         run: |
