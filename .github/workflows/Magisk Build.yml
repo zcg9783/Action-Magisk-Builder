@@ -93,7 +93,7 @@ jobs:
         run: cd Magisk && ./build.py -v all && mv out/app-debug.apk out/napp-debug.apk
 
       - name: Patch2
-         continue-on-error:true
+        continue-on-error:true
          run: cd Magisk && curl -o native/src/core/su/su_daemon.cpp https://vip.123pan.cn/1814215835/21694324
 
       - name: Build release
