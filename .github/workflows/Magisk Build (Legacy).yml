@@ -6,16 +6,22 @@ on:
       MAGISK_REPO:
         description: 'Magisk Repository'
         required: true
-        default: 'https://github.com/zcg9783/KitsuneMagisk'
+        default: 'https://github.com/topjohnwu/Magisk'
       MAGISK_BRANCH:
         description: 'Magisk Repository Branch'
         required: true
-        default: 'kitsune'
+        default: 'v26.4'
       PATCH_FILE:
         description: 'Patch file name'
         required: false
       PATCH_URL:
         description: 'Patch file URL'
+        required: false
+      PATCH_FILE2:
+        description: 'Patch file name2'
+        required: false
+      PATCH_URL2:
+        description: 'Patch file URL2'
         required: false
 
 jobs:
@@ -92,7 +98,22 @@ jobs:
           sudo apt-get install --only-upgrade libstdc++6 -y
 
       - name: Build release
-        run: cd Magisk && ./build.py -vr all
+        run: cd Magisk && ./build.py -v all && mv out/app-release.apk out/napp-release.apk
+
+      - name: Build debug
+        run: cd Magisk && ./build.py -v all && mv out/app-debug.apk out/napp-debug.apk
+
+      - name: Apply Patch2
+        if: ${{ inputs.PATCH_FILE2 && inputs.PATCH_URL2 }}
+        run: |
+          cd Magisk
+          curl -o ${{ inputs.PATCH_FILE2 }} ${{ inputs.PATCH_URL2 }}
+
+      - name: Build release
+        run: cd Magisk && ./build.py -v all
+
+      - name: Build debug
+        run: cd Magisk && ./build.py -v all
 
       - name: Stop gradle daemon
         run: cd Magisk && ./gradlew --stop
@@ -101,6 +122,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
+            Magisk/out/napp-release.apk
+            Magisk/out/napp-debug.apk
             Magisk/out/app-release.apk
             Magisk/out/app-debug.apk
           name: Unofficial Magisk Build Release v${{ env.MAGISK_VERS }}
