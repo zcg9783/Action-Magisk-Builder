@@ -17,10 +17,7 @@ jobs:
     name: Build Magisk
     runs-on: ubuntu-22.04
     env:
-      SCCACHE_DIRECT: false
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # 使用预构建的二进制文件
-      SKIP_RUST_BUILD: "true"
     permissions:
       contents: write
     strategy:
@@ -34,99 +31,60 @@ jobs:
           git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties)" >> $GITHUB_ENV
 
-      - name: Set up JDK 11
-        uses: actions/setup-java@v4
-        with:
-          distribution: "temurin"
-          java-version: "11"
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-      - name: Set up Python 3
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.8"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Install essential build tools
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Magisk in Docker
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential unzip
-          # 安装 protobuf 3.19.4 (与 v25.2 兼容)
-          curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protoc-3.19.4-linux-x86_64.zip
-          unzip protoc-3.19.4-linux-x86_64.zip -d protoc
-          sudo mv protoc/bin/protoc /usr/local/bin/
-          sudo mv protoc/include/* /usr/local/include/
-          protoc --version
-
-      - name: Set up sccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          variant: sccache
-          key: ${{ runner.os }}-${{ github.sha }}
-          restore-keys: ${{ runner.os }}
-          max-size: 10000M
-
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            !~/.gradle/caches/build-cache-*
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts') }}
-          restore-keys: ${{ runner.os }}-gradle-
-
-      - name: Set up NDK
-        run: cd Magisk && python build.py -v ndk
-        shell: bash
-
-      - name: Download prebuilt Rust binaries
-        run: |
-          cd Magisk
-          mkdir -p native/out
-          # 从社区源下载预构建的 Rust 二进制文件
-          wget https://github.com/Magisk-Modules-Repo/magisk_files/raw/main/rust-prebuilt-v25.2.tar.xz -O rust.tar.xz
-          tar -xf rust.tar.xz -C native/out
-          echo "Prebuilt Rust binaries installed"
+          # 创建自定义 Dockerfile
+          cat << EOF > Dockerfile
+          FROM ubuntu:20.04
           
-          # 跳过 Rust 构建
-          sed -i 's/run_cargo_build/#run_cargo_build/' build.py
-          sed -i 's/dump_bin_header/#dump_bin_header/' build.py
-
-      - name: Patch build system
-        run: |
-          cd Magisk
-          # 禁用 Rust 相关检查
-          sed -i 's/if "B_POLICY" in flags:/if False and "B_POLICY" in flags:/' build.py
-          sed -i 's/if "B_MAGISK" in flags:/if False and "B_MAGISK" in flags:/' build.py
-          sed -i 's/if "B_INIT" in flags:/if False and "B_INIT" in flags:/' build.py
+          # 设置环境变量
+          ENV DEBIAN_FRONTEND=noninteractive
           
-          # 跳过 cxxbridge-cmd 安装
-          sed -i 's/run(\[cargo, "install"/#run(\[cargo, "install"/' build.py
+          # 安装基本依赖
+          RUN apt-get update && apt-get install -y \
+              git curl unzip python3 openjdk-11-jdk build-essential \
+              libssl-dev pkg-config zlib1g-dev ccache \
+              && rm -rf /var/lib/apt/lists/*
           
-          # 修复可能的路径问题
-          sed -i 's/"native\/out\/generated"/"native\/out\/generated" if not os.path.exists("native\/out\/generated") else None/' build.py
-
-      - name: Setup environment
-        run: |
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-          sudo apt-get update
-          sudo apt-get install --only-upgrade libstdc++6 -y
-
-      - name: Apply Patch
-        continue-on-error: true
-        run: |
-          cd Magisk
-          echo 1
-
-      - name: Build all
-        run: |
-          cd Magisk
-          # 设置兼容性标志
-          export CXXFLAGS="-Wno-error -flto=thin"
-          export LDFLAGS="-Wl,--allow-multiple-definition"
-          # 创建必要目录
-          mkdir -p native/out/generated
-          # 执行构建
-          ./build.py -v all
+          # 安装特定版本的 protobuf
+          RUN curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protoc-3.19.4-linux-x86_64.zip \
+              && unzip protoc-3.19.4-linux-x86_64.zip -d protoc \
+              && mv protoc/bin/protoc /usr/local/bin/ \
+              && mv protoc/include/* /usr/local/include/ \
+              && rm -rf protoc*
+          
+          # 安装 Rust 1.64 (与 Magisk v25.2 兼容)
+          RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+              --default-toolchain 1.64.0
+          ENV PATH="/root/.cargo/bin:$PATH"
+          
+          # 设置工作目录
+          WORKDIR /build
+          EOF
+          
+          # 构建 Docker 镜像
+          docker build -t magisk-builder:2022 .
+          
+          # 运行构建
+          docker run --rm -v $(pwd)/Magisk:/build \
+            -e SCCACHE_DIRECT=false \
+            magisk-builder:2022 \
+            /bin/bash -c "cd /build && ./build.py -v all"
+          
+          # 验证构建结果
+          ls -la Magisk/out
 
       - name: Stop gradle daemon
         run: cd Magisk && ./gradlew --stop
@@ -151,7 +109,7 @@ jobs:
             ## Magisk ${{ env.MAGISK_VERS }} (v25.2)
             **Built on**: ${{ github.event.repository.updated_at }}
             **Commit**: ${{ github.sha }}
-            **Note**: This build uses precompiled Rust binaries
+            **Build method**: Docker container with compatible toolchain
             
             ## Notes
             This is an unofficial build for testing and development purposes.
