@@ -35,7 +35,7 @@ jobs:
       - name: Set up Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: stable
+          toolchain: "1.74"
           components: rust-src
           profile: minimal
 
@@ -44,6 +44,7 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "11"
+
 
       - name: Set up Python 3
         uses: actions/setup-python@v5
