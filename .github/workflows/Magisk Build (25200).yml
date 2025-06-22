@@ -76,41 +76,31 @@ jobs:
           key: ${{ runner.os }}-build-cache-${{ github.sha }}
           restore-keys: ${{ runner.os }}-build-cache-
 
-      - name: Install Android NDK
-        run: |
-          # 安装最新版 NDK
-          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          sudo $SDKMANAGER --install "ndk;25.2.9519653"  # 使用 v25.2 兼容的 NDK
-          
-          # 设置环境变量
-          echo "NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
-          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
+      - name: Set up NDK
+        run: cd Magisk && python build.py -v ndk
+        shell: bash
 
-      - name: Override Magisk NDK
+      - name: Verify NDK structure
         run: |
-          # 备份原始 NDK
-          sudo mv /usr/local/lib/android/sdk/ndk/magisk /usr/local/lib/android/sdk/ndk/magisk.bak || true
-          
-          # 创建符号链接到新 NDK
-          sudo ln -s $ANDROID_HOME/ndk/25.2.9519653 /usr/local/lib/android/sdk/ndk/magisk
-          
-          # 验证 NDK 版本
-          echo "New NDK version:"
-          /usr/local/lib/android/sdk/ndk/magisk/ndk-build --version
+          echo "Checking NDK structure:"
+          ls -la /usr/local/lib/android/sdk/ndk/magisk/toolchains
+          ls -la /usr/local/lib/android/sdk/ndk/magisk/toolchains/rust || true
 
-      - name: Override Magisk NDK Rust
+      - name: Create Rust toolchain symlinks
         run: |
           rustc_path=$(which rustc)
           cargo_path=$(which cargo)
           rust_dir="/usr/local/lib/android/sdk/ndk/magisk/toolchains/rust/bin"
           
-          sudo mv "$rust_dir/rustc" "$rust_dir/rustc.bak" || true
-          sudo mv "$rust_dir/cargo" "$rust_dir/cargo.bak" || true
+          # 确保目录存在
+          sudo mkdir -p "$rust_dir"
           
+          # 创建符号链接
           sudo ln -sf "$rustc_path" "$rust_dir/rustc"
           sudo ln -sf "$cargo_path" "$rust_dir/cargo"
           
+          echo "Created symlinks:"
+          ls -la "$rust_dir"
           echo "New Magisk rustc version:"
           "$rust_dir/rustc" --version
 
@@ -132,7 +122,7 @@ jobs:
           cd Magisk
           rustup default nightly
           # 添加不透明指针支持
-          echo "buildFlags += [\"-opaque-pointers\"]" >> native/src/jni/Android.mk
+          find native/src -name 'Android.mk' -exec sh -c 'echo "buildFlags += [\"-opaque-pointers\"]" >> {}' \;
           ./build.py -v all
 
       - name: Stop gradle daemon
