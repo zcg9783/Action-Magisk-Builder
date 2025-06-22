@@ -35,7 +35,7 @@ jobs:
       - name: Set up Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: "1.74"
+          toolchain: "nightly"  # 切换到 nightly 工具链
           components: rust-src
           profile: minimal
 
@@ -110,7 +110,9 @@ jobs:
 
       - name: Build debug
         run: |
-          cd Magisk   
+          cd Magisk
+          # 设置 nightly 工具链为默认
+          rustup default nightly
           ./build.py -v all
 
       - name: Stop gradle daemon
