@@ -83,7 +83,7 @@ jobs:
       - name: Patch
         run: |
           cd Magisk
-          sed -i 's/magisk\.ondkVersion=r24\.2/magisk.ondkVersion=r25.0/g' gradle.properties
+          sed -i "s/cmds = \[cargo, 'install', '--root', local_cargo_root, 'cxxbridge-cmd'\]/cmds = [cargo, 'install', '--root', local_cargo_root, 'cxxbridge-cmd', '--version', '1.0.96']/g" build.py
 
       - name: Build release
         continue-on-error: true
