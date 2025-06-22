@@ -80,20 +80,20 @@ jobs:
         run: |
           # 安装最新版 NDK
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          sudo $SDKMANAGER --install "ndk;26.4.0"
+          sudo $SDKMANAGER --install "ndk;25.2.9519653"  # 使用 v25.2 兼容的 NDK
           
           # 设置环境变量
-          echo "NDK_HOME=$ANDROID_HOME/ndk/26.4.0" >> $GITHUB_ENV
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.4.0" >> $GITHUB_ENV
-          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/26.4.0" >> $GITHUB_ENV
+          echo "NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
 
       - name: Override Magisk NDK
         run: |
           # 备份原始 NDK
-          sudo mv /usr/local/lib/android/sdk/ndk/magisk /usr/local/lib/android/sdk/ndk/magisk.bak
+          sudo mv /usr/local/lib/android/sdk/ndk/magisk /usr/local/lib/android/sdk/ndk/magisk.bak || true
           
           # 创建符号链接到新 NDK
-          sudo ln -s $ANDROID_HOME/ndk/26.4.0 /usr/local/lib/android/sdk/ndk/magisk
+          sudo ln -s $ANDROID_HOME/ndk/25.2.9519653 /usr/local/lib/android/sdk/ndk/magisk
           
           # 验证 NDK 版本
           echo "New NDK version:"
