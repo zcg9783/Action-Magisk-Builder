@@ -6,11 +6,11 @@ on:
       MAGISK_REPO:
         description: 'Magisk Repository'
         required: true
-        default: 'https://github.com/zcg9783/Magisk'
+        default: 'https://github.com/topjohnwu/Magisk'
       MAGISK_BRANCH:
         description: 'Magisk Repository Branch'
         required: true
-        default: 'master'
+        default: 'v28.1'
 
 jobs:
   build:
@@ -82,17 +82,36 @@ jobs:
       - name: Apply Patch
         run: |
           cd Magisk
-          curl -o native/src/core/scripting.cpp https://vip.123pan.cn/1814215835/20854146
-          curl -o native/src/core/su/su_daemon.cpp https://vip.123pan.cn/1814215835/20854147
+          curl -o native/src/core/scripting.cpp https://vip.123pan.cn/1814215835/21694316
 
       - name: Build release
+        continue-on-error: true
+        run: cd Magisk && ./build.py -vr all && mv out/app-release.apk out/napp-release.apk
+
+      - name: Build debug
+        continue-on-error: true
+        run: cd Magisk && ./build.py -v all && mv out/app-debug.apk out/napp-debug.apk
+
+      - name: Patch2
+         continue-on-error:true
+         run: cd Magisk && curl -o native/src/core/su/su_daemon.cpp https://vip.123pan.cn/1814215835/21694324
+
+      - name: Build release
+        continue-on-error: true
         run: cd Magisk && ./build.py -vr all
+
+      - name: Build debug
+        continue-on-error: true
+        run: cd Magisk && ./build.py -v all
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            Magisk/out/app-release.apk            
+            Magisk/out/napp-release.apk 
+            Magisk/out/napp-debug.apk
+            Magisk/out/app-release.apk 
+            Magisk/out/app-debug.apk           
           name: Unofficial Magisk Build Release v${{ env.MAGISK_VERS }}
           tag_name: ${{ github.run_id }}
           body: |
