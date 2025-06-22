@@ -96,9 +96,7 @@ jobs:
       - name: Build debug
         run: |
           cd Magisk        
-          sed -i "s|env\['CARGO_BUILD_RUSTC'\] = op.join(rust_bin, 'rustc' + EXE_EXT)|# &|" build.py
           ./build.py -v all
-          mv out/app-debug.apk out/napp-debug.apk
 
       - name: Stop gradle daemon
         run: cd Magisk && ./gradlew --stop
