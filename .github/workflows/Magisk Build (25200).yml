@@ -15,7 +15,7 @@ on:
 jobs:
   build:
     name: Build Magisk
-    runs-on: ubuntu-22.04  # 使用更兼容的 Ubuntu 22.04
+    runs-on: ubuntu-22.04
     env:
       SCCACHE_DIRECT: false
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -25,6 +25,8 @@ jobs:
       RUST_BACKTRACE: "short"
       ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/magisk
       ANDROID_NDK_ROOT: /usr/local/lib/android/sdk/ndk/magisk
+      # 设置兼容的 Rust 版本
+      RUST_TOOLCHAIN: "nightly-2023-11-01"
     permissions:
       contents: write
     strategy:
@@ -41,7 +43,7 @@ jobs:
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2023-06-01  # 2023年6月的稳定版本
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rust-src
 
       - name: Set up JDK 11
@@ -59,6 +61,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential pkg-config libssl-dev unzip zlib1g-dev
+          # 安装特定版本 protobuf 编译器
+          curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protoc-3.19.4-linux-x86_64.zip
+          unzip protoc-3.19.4-linux-x86_64.zip -d protoc
+          sudo mv protoc/bin/protoc /usr/local/bin/
+          sudo mv protoc/include/* /usr/local/include/
+          protoc --version
 
       - name: Set up sccache
         uses: hendrikmuhs/ccache-action@v1.2
@@ -91,12 +99,15 @@ jobs:
         run: cd Magisk && python build.py -v ndk
         shell: bash
 
-      - name: Pre-install cxxbridge-cmd
+      - name: Install cxxbridge-cmd with version pinning
         run: |
-          # 在系统环境中构建并安装cxxbridge-cmd
-          cargo install cxxbridge-cmd --version 1.0.158 -j $(nproc) --force
-          # 将cxxbridge复制到Magisk构建目录中
+          # 创建必要的目录结构
           mkdir -p /usr/local/lib/android/sdk/ndk/magisk/toolchains/rust/bin
+          
+          # 使用正确的工具链安装 cxxbridge-cmd
+          cargo +${{ env.RUST_TOOLCHAIN }} install cxxbridge-cmd --version 1.0.100 -j $(nproc) --force
+          
+          # 复制到 Magisk 构建目录
           cp ~/.cargo/bin/cxxbridge /usr/local/lib/android/sdk/ndk/magisk/toolchains/rust/bin/
           echo "cxxbridge installed at:"
           /usr/local/lib/android/sdk/ndk/magisk/toolchains/rust/bin/cxxbridge --version
@@ -116,7 +127,7 @@ jobs:
       - name: Build all
         run: |
           cd Magisk
-          # 设置兼容性标志
+          # 设置链接器标志解决兼容性问题
           export RUSTFLAGS="-C link-arg=-Wl,--allow-multiple-definition"
           # 执行完整构建
           ./build.py -v all
