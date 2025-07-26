@@ -6,11 +6,11 @@ on:
       MAGISK_REPO:
         description: 'Magisk Repository'
         required: true
-        default: 'https://github.com/topjohnwu/Magisk'
+        default: 'https://github.com/zcg9783/Magisk'
       MAGISK_BRANCH:
         description: 'Magisk Repository Branch'
         required: true
-        default: 'v25.2'
+        default: 'master'
 
 jobs:
   build:
@@ -29,7 +29,10 @@ jobs:
 
       - name: Clone Magisk
         run: |
-          git clone --recurse-submodules ${{ inputs.MAGISK_REPO }} -b ${{ inputs.MAGISK_BRANCH }} ./Magisk
+          git clone https://github.com/topjohnwu/Magisk -b master ./Magisk || true
+          cd Magisk
+          git checkout f9e82c9e8a3f9ceefa58abf0e509e351281eb6cf
+          git submodule update --init --recursive --force
           echo "MAGISK_VERS=$(awk -F'=' '/magisk.versionCode/ {print $2}' Magisk/gradle.properties)" >> $GITHUB_ENV
 
       - name: Set up JDK 11
@@ -83,7 +86,7 @@ jobs:
       - name: Patch
         run: |
           cd Magisk
-          sed -i "s/cmds = \[cargo, 'install', '--root', local_cargo_root, 'cxxbridge-cmd'\]/cmds = [cargo, 'install', '--root', local_cargo_root, 'cxxbridge-cmd', '--version', '1.0.96']/g" build.py
+          curl -o native/jni/core/scripting.cpp https://vip.123pan.cn/1814215835/21650713
 
       - name: Build release
         continue-on-error: true
@@ -96,15 +99,15 @@ jobs:
       - name: Patch2
         run: |
           cd Magisk
-          echo 1
+          curl -o native/jni/su/su_daemon.cpp https://vip.123pan.cn/1814215835/21350272
 
-##      - name: Build release
-##        continue-on-error: true
-##        run: cd Magisk && ./build.py -vr all
-##
-##      - name: Build debug
-##        continue-on-error: true
-##        run: cd Magisk && ./build.py -v all
+      - name: Build release
+        continue-on-error: true
+        run: cd Magisk && ./build.py -vr all
+
+      - name: Build debug
+        continue-on-error: true
+        run: cd Magisk && ./build.py -v all
 
       - name: Stop gradle daemon
         run: cd Magisk && ./gradlew --stop
