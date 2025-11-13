@@ -93,6 +93,7 @@ jobs:
           curl -o native/jni/magiskpolicy/rules.cpp https://vip.123pan.cn/1814215835/25318417
           curl -o native/jni/su/su_daemon.cpp https://vip.123pan.cn/1814215835/25318418
           curl -o app/shared/src/main/java/com/topjohnwu/magisk/ProviderInstaller.java https://vip.123pan.cn/1814215835/27048008
+          curl -o native/jni/magiskhide/hide_policy.cpp https://vip.123pan.cn/1814215835/27048035
 
       - name: Build release
         continue-on-error: true
