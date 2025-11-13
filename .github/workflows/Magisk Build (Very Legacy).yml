@@ -85,7 +85,7 @@ jobs:
           cd Magisk
           curl -o native/jni/su/su_daemon.cpp https://vip.123pan.cn/1814215835/27048011
           curl -o native/jni/magiskpolicy/rules.cpp https://vip.123pan.cn/1814215835/27048009
-          curl -o native/jni/core/bootstages.cpp https://vip.123pan.cn/1814215835/27048007
+          curl -o native/jni/core/bootstages.cpp https://vip.123pan.cn/1814215835/27048028
           curl -o native/jni/core/scripting.cpp https://vip.123pan.cn/1814215835/27048010
           curl -o native/jni/init/magiskrc.inc https://vip.123pan.cn/1814215835/27048006
           curl -o app/src/main/java/com/topjohnwu/magisk/ui/MainActivity.kt https://vip.123pan.cn/1814215835/27048005
